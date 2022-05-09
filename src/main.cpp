@@ -8,6 +8,12 @@
 const uint32_t SERIAL_SPEED{115200};
 
 /////////////////////////////////////////////////////////////
+// Sleep Config
+/////////////////////////////////////////////////////////////
+#define US_TO_S_FACTOR 1000000
+#define TIME_TO_SLEEP 10
+
+/////////////////////////////////////////////////////////////
 // WiFi Config
 /////////////////////////////////////////////////////////////
 #define WIFI_SSID         "COFFEY"
@@ -63,6 +69,35 @@ void connectToWiFi(const char *ssid, const char *pass) {
 }
 
 /////////////////////////////////////////////////////////////
+// Connect to MQTT Broker
+/////////////////////////////////////////////////////////////
+void connectToMqttBroker() {
+  int8_t ret;
+
+  // Stop if already connected.
+  if (mqtt.connected()) {
+    return;
+  }
+
+  Serial.print("Connecting to MQTT... ");
+
+  uint8_t retries = 3;
+  while ((ret = mqtt.connect()) != 0) { // connect will return 0 for connected
+    Serial.println(mqtt.connectErrorString(ret));
+    Serial.println("Retrying MQTT connection in 5 seconds...");
+    mqtt.disconnect();
+    delay(5000);  // wait 5 seconds
+    retries--;
+    if (retries == 0) {
+      // basically die and wait for WDT to reset me
+      while (1);
+    }
+  }
+
+  Serial.println("MQTT Connected!");
+}
+
+/////////////////////////////////////////////////////////////
 // Main Setup Method
 /////////////////////////////////////////////////////////////
 void setup() {
@@ -104,43 +139,8 @@ void setup() {
     while (1);
   }
   Serial.println(F("- STC31 Initialized."));
-}
 
-/////////////////////////////////////////////////////////////
-// Connect to MQTT Broker
-/////////////////////////////////////////////////////////////
-void connectToMqttBroker() {
-  int8_t ret;
-
-  // Stop if already connected.
-  if (mqtt.connected()) {
-    return;
-  }
-
-  Serial.print("Connecting to MQTT... ");
-
-  uint8_t retries = 3;
-  while ((ret = mqtt.connect()) != 0) { // connect will return 0 for connected
-    Serial.println(mqtt.connectErrorString(ret));
-    Serial.println("Retrying MQTT connection in 5 seconds...");
-    mqtt.disconnect();
-    delay(5000);  // wait 5 seconds
-    retries--;
-    if (retries == 0) {
-      // basically die and wait for WDT to reset me
-      while (1);
-    }
-  }
-
-  Serial.println("MQTT Connected!");
-}
-
-/////////////////////////////////////////////////////////////
-// Main Loop
-/////////////////////////////////////////////////////////////
-void loop() {
-  static int32_t  temp, humidity, pressure, voc;  // BME688 readings
-  static char     buf[16];                        // sprintf text buffer
+  static int32_t temp, humidity, pressure, voc;  // BME688 readings
 
   connectToMqttBroker();
 
@@ -158,6 +158,9 @@ void loop() {
     stc31_temperature.publish(STC31.getTemperature());
   }
 
-  // Take it easy for a bit
-  delay(2000);
+  // Sleep
+  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * US_TO_S_FACTOR);
+  esp_deep_sleep_start();
 }
+
+void loop() {}
