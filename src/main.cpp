@@ -11,7 +11,7 @@ const uint32_t SERIAL_SPEED{115200};
 // Sleep Config
 /////////////////////////////////////////////////////////////
 #define US_TO_S_FACTOR 1000000
-#define TIME_TO_SLEEP 10
+#define MINS_TO_SLEEP 10
 
 /////////////////////////////////////////////////////////////
 // WiFi Config
@@ -159,7 +159,7 @@ void setup() {
   }
 
   // Sleep
-  esp_sleep_enable_timer_wakeup(TIME_TO_SLEEP * US_TO_S_FACTOR);
+  esp_sleep_enable_timer_wakeup(MINS_TO_SLEEP * US_TO_S_FACTOR * 60);
   esp_deep_sleep_start();
 }
 
